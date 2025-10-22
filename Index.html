@@ -1,0 +1,378 @@
+<!--
+Profit Pulse - SEO-ready web app (single package)
+Files included below. Save as separate files as noted:
+  1) index.html  (this file's HTML portion)
+  2) sw.js       (Service Worker - copy the SW section into sw.js)
+  3) manifest.json (copy manifest section into manifest.json)
+
+How to use:
+  - Place index.html, sw.js, manifest.json on your web server root.
+  - Serve over HTTPS (required for PWAs/service worker).
+  - Open index.html in browser. Click "Install" to add to home screen.
+
+This app is lightweight, responsive, SEO-ready, works offline with localStorage
+and is theme-switchable (day/night). Minimal copy; interactive KPI inputs;
+add branches, set metrics, see KPI score and quick recommendations.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Profit Pulse — track the 10 key business metrics that matter when scaling multi-branch businesses. Offline-capable, PWA, simple dashboards and quick recommendations.">
+  <meta name="keywords" content="business metrics, KPI app, franchise metrics, small business, PWA, offline app, metric tracking">
+  <meta name="author" content="Profit Pulse">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Profit Pulse — KPI app for scaling businesses">
+  <meta property="og:description" content="Track, score and master the 10 key metrics before scaling your chain. Offline-capable Progressive Web App.">
+  <meta property="og:type" content="website">
+
+  <title>Profit Pulse — Track 10 Key Metrics</title>
+
+  <!-- Structured data for SEO -->
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"WebApplication",
+    "name":"Profit Pulse",
+    "url":"/",
+    "description":"Track the 10 key metrics that determine whether scaling your business is safe.",
+    "applicationCategory":"BusinessApplication"
+  }
+  </script>
+
+  <!-- App manifest -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0b1020" id="themeColorMeta">
+
+  <!-- Minimal modern CSS -->
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#ffffff; --text:#0b1020; --muted:#6b7280; --accent:#6C5CE7; --success:#10B981; --danger:#EF4444;
+      --glass: rgba(255,255,255,0.6);
+    }
+    [data-theme='dark']{ --bg:#0b1020; --card:#091025; --text:#e6eef8; --muted:#9aa4b2; --accent:#7C3AED; --success:#34D399; --danger:#FB7185; --glass: rgba(10,12,18,0.6);} 
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial; background:linear-gradient(180deg,var(--bg),var(--bg));color:var(--text);}
+    .wrap{max-width:1100px;margin:24px auto;padding:18px}
+    header{display:flex;align-items:center;gap:12px;justify-content:space-between}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#4F46E5);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;box-shadow:0 6px 18px rgba(0,0,0,0.12)}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    .top-actions{display:flex;gap:8px;align-items:center}
+    button{background:var(--accent);color:white;border:0;padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer;box-shadow:0 6px 14px rgba(76,29,149,0.12)}
+    .ghost{background:transparent;color:var(--text);border:1px solid rgba(0,0,0,0.06);}
+
+    main{display:grid;grid-template-columns:1fr 380px;gap:18px;margin-top:18px}
+    @media(max-width:980px){main{grid-template-columns:1fr}}
+
+    .card{background:var(--card);border-radius:14px;padding:14px;box-shadow:0 6px 18px rgba(9,16,32,0.04)}
+    .metrics-list{display:grid;gap:8px}
+
+    .metric{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.03)}
+    .metric .info{flex:1}
+    .metric h3{margin:0;font-size:14px}
+    .metric p{margin:4px 0 0;color:var(--muted);font-size:12px}
+    input[type="number"], input[type="text"], select{padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.08);width:100%}
+
+    .small{font-size:12px;color:var(--muted)}
+    .progress{height:8px;background:linear-gradient(90deg, rgba(0,0,0,0.06), rgba(0,0,0,0.02));border-radius:8px;overflow:hidden}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#4F46E5);}
+
+    .score{font-size:28px;font-weight:800}
+    .center{display:flex;align-items:center;justify-content:center}
+
+    footer{margin-top:18px;color:var(--muted);font-size:12px;text-align:center}
+
+    /* playful touches */
+    .chip{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border-radius:999px;background:var(--glass);backdrop-filter:blur(4px);}
+
+    /* form microlayout */
+    .row{display:flex;gap:8px}
+    .row > *{flex:1}
+
+    .toggle{display:inline-flex;align-items:center;gap:8px;padding:6px;border-radius:999px;border:1px solid rgba(0,0,0,0.06)}
+    .muted{color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap" id="app">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden>MM</div>
+        <div>
+          <h1>Profit Pulse</h1>
+          <p class="lead">10 metrics to scale safely — simple, fast, offline-ready.</p>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <div class="toggle" role="toolbar" aria-label="Theme and mode">
+          <label class="small muted">Theme</label>
+          <select id="themeSelect" aria-label="Theme select">
+            <option value="day">Day</option>
+            <option value="dark">Night</option>
+          </select>
+        </div>
+        <button id="installBtn" class="ghost">Install</button>
+        <button id="exportBtn">Export</button>
+      </div>
+    </header>
+
+    <main>
+      <section>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div>
+              <strong>Dashboard</strong>
+              <div class="small muted">Quick view of your branch or chain</div>
+            </div>
+            <div class="chip small">Score <span id="scoreBadge" style="margin-left:8px">—</span></div>
+          </div>
+
+          <div class="metrics-list" id="metricsList" aria-live="polite"></div>
+
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button id="addMetricBtn">+ Add Metric</button>
+            <button id="resetBtn" class="ghost">Reset</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <strong>Quick Checks</strong>
+          <div class="small muted">Enter numbers to get instant tips</div>
+          <div style="margin-top:8px" id="quickChecks">
+            <!-- compact KPI inputs -->
+            <div class="row" style="margin-top:8px">
+              <input type="number" id="sellingPriceRatio" placeholder="Selling price ratio (x cost)" min="0" step="0.1">
+              <input type="number" id="rentPct" placeholder="Rent % of revenue" min="0" max="100">
+            </div>
+            <div class="row" style="margin-top:8px">
+              <input type="number" id="prodPerEmp" placeholder="Productivity per employee (x salary)" min="0" step="0.1">
+              <input type="number" id="custReturn" placeholder="Customer return %" min="0" max="100">
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button id="checkBtn" class="ghost">Check</button>
+              <button id="saveQuickBtn">Save to Dashboard</button>
+            </div>
+            <div id="quickTips" style="margin-top:10px;color:var(--muted)"></div>
+          </div>
+        </div>
+
+      </section>
+
+      <aside>
+        <div class="card">
+          <strong>Overview</strong>
+          <div class="small muted">One glance health</div>
+
+          <div style="margin-top:12px">
+            <div class="small muted">Working capital</div>
+            <div class="row" style="margin-top:6px"><input id="wcMonths" type="number" placeholder="months" min="0"><div class="small center">months</div></div>
+
+            <div style="margin-top:10px" class="small muted">Payback period</div>
+            <div class="row" style="margin-top:6px"><input id="payback" type="number" placeholder="months" min="0"><div class="small center">m</div></div>
+
+            <div style="margin-top:14px">
+              <div class="small muted">Recommendations</div>
+              <div id="recs" style="margin-top:8px;color:var(--muted)">No data yet — add metrics or use Quick Checks.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <strong>Branches</strong>
+          <div class="small muted">Manage multiple branches</div>
+          <div id="branches" style="margin-top:8px"></div>
+          <div style="margin-top:8px"><input id="branchName" placeholder="New branch name"><button id="addBranchBtn" class="ghost">Add</button></div>
+        </div>
+
+      </aside>
+    </main>
+
+    <footer>
+      Profit Pulse — Built for safe scaling · Works offline · Minimal & modern
+    </footer>
+  </div>
+
+  <!-- App logic - offline friendly, localStorage based -->
+  <script>
+    // Basic app state + default metrics
+    const DEFAULT_METRICS = [
+      {id:'m1',key:'Selling price',hint:'> 2.5 × cost',value:null,weight:1.2,target:2.5},
+      {id:'m2',key:'Rent %',hint:'< 10–15% revenue',value:null,weight:1.0,target:12.5},
+      {id:'m3',key:'Productivity/emp',hint:'> 4 × avg salary',value:null,weight:1.1,target:4},
+      {id:'m4',key:'Salary-to-revenue %',hint:'20–30%',value:null,weight:1.0,target:25},
+      {id:'m5',key:'Customer return %',hint:'60–70%',value:null,weight:1.1,target:65},
+      {id:'m6',key:'Marketing ROI',hint:'> 6 ×',value:null,weight:1.0,target:6},
+      {id:'m7',key:'Working capital (months)',hint:'3–6 months',value:null,weight:1.0,target:4.5},
+      {id:'m8',key:'Payback period (months)',hint:'12–18 months',value:null,weight:1.0,target:15},
+      {id:'m9',key:'Operational readiness',hint:'SOPs, training',value:null,weight:1.0,target:1},
+      {id:'m10',key:'Profit/Loss cadence',hint:'Weekly',value:null,weight:1.0,target:1}
+    ];
+
+    // helpers
+    const uid = ()=>('id'+Math.random().toString(36).slice(2,9));
+    const q = s=>document.querySelector(s);
+
+    // persistence
+    const LS_KEY = 'metricmaster.v1';
+    function loadState(){
+      try{const raw=localStorage.getItem(LS_KEY);return raw?JSON.parse(raw):{metrics:DEFAULT_METRICS,branches:[],settings:{theme:'day'}}}catch(e){return {metrics:DEFAULT_METRICS,branches:[],settings:{theme:'day'}}}
+    }
+    function saveState(state){localStorage.setItem(LS_KEY,JSON.stringify(state))}
+
+    // render
+    let state = loadState();
+
+    function renderMetrics(){
+      const container = q('#metricsList');container.innerHTML='';
+      state.metrics.forEach(m=>{
+        const div = document.createElement('div');div.className='metric';
+        div.innerHTML = `
+          <div class="info">
+            <h3>${m.key}</h3>
+            <p class="small muted">${m.hint}</p>
+            <div style="margin-top:8px" class="row">
+              <input type="number" data-id="${m.id}" value="${m.value || ''}" placeholder="value">
+              <select data-id="${m.id}">
+                <option value="-">—</option>
+                <option value="good">Good</option>
+                <option value="warn">Watch</option>
+                <option value="bad">Fix</option>
+              </select>
+            </div>
+          </div>
+          <div style="width:170px;text-align:right">
+            <div class="small muted">Target</div>
+            <div class="score">${m.target}</div>
+          </div>
+        `;
+        container.appendChild(div);
+      })
+    }
+
+    function recalcScore(){
+      // simple scoring: if metric value is present compare to target depending on context
+      let total=0, weightSum=0;state.metrics.forEach(m=>{weightSum+=m.weight; if(m.value!=null && m.value!=='' && !isNaN(m.value)){
+        const val = Number(m.value); let score=0;
+        // heuristics: if hint mentions '>' assume higher is better; if contains '%' lower better or range
+        const hint = m.hint || '';
+        if(hint.includes('>')){
+          score = Math.max(0,Math.min(1, val/m.target));
+        } else if(hint.includes('<')){
+          // lower is better
+          score = Math.max(0,Math.min(1, m.target/val));
+        } else {
+          // range or equal - closer is better
+          score = 1 - (Math.abs(val - m.target) / (m.target || 1));
+        }
+        total += Math.max(0,score) * m.weight;
+      }})
+      const percent = weightSum?Math.round((total/weightSum)*100):0;
+      q('#scoreBadge').textContent = percent + '%';
+      return percent;
+    }
+
+    function renderBranches(){
+      const el = q('#branches'); el.innerHTML='';
+      state.branches.forEach(b=>{
+        const d = document.createElement('div');d.className='chip';d.style.marginBottom='6px';d.textContent = b.name;
+        el.appendChild(d);
+      })
+    }
+
+    function applyTheme(){
+      const t = state.settings.theme || 'day';
+      document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'day');
+      q('#themeSelect').value = t==='dark'?'dark':'day';
+      q('#themeColorMeta').setAttribute('content', t==='dark'?'#091025':'#f6f7fb');
+    }
+
+    // init
+    renderMetrics();renderBranches();applyTheme();recalcScore();
+
+    // event delegation
+    document.addEventListener('input', (e)=>{
+      if(e.target && e.target.matches('input[data-id]')){
+        const id=e.target.dataset.id; const val=e.target.value; const m=state.metrics.find(x=>x.id===id); if(m){m.value=val; saveState(state); recalcScore();}
+      }
+      if(e.target && e.target.matches('select[data-id]')){
+        // small UX: set helpful hints
+        const id=e.target.dataset.id; const v=e.target.value; const m=state.metrics.find(x=>x.id===id);
+        if(m){if(v==='good')m.value=m.target; if(v==='warn')m.value= (m.target*1.05).toFixed(2); if(v==='bad')m.value = (m.target*0.6).toFixed(2); saveState(state); renderMetrics(); recalcScore();}
+      }
+    })
+
+    q('#addMetricBtn').addEventListener('click', ()=>{
+      const k = prompt('Metric name (short)'); if(!k) return; const id=uid(); state.metrics.push({id,key:k,hint:'custom',value:null,weight:1,target:0}); saveState(state); renderMetrics();
+    })
+
+    q('#resetBtn').addEventListener('click', ()=>{ if(confirm('Reset to defaults?')){state = {metrics:DEFAULT_METRICS,branches:[],settings:{theme:'day'}}; saveState(state); renderMetrics(); renderBranches(); applyTheme(); recalcScore(); alert('Reset');}})
+
+    q('#checkBtn').addEventListener('click', ()=>{
+      const sp = Number(q('#sellingPriceRatio').value||0); const rent = Number(q('#rentPct').value||0); const prod = Number(q('#prodPerEmp').value||0); const ret = Number(q('#custReturn').value||0);
+      const tips=[];
+      if(sp>0) tips.push(sp >= 2.5 ? 'Selling price ratio looks healthy.' : 'Selling price may be low vs cost. Aim ≥ 2.5×.');
+      if(rent>0) tips.push(rent <= 15 ? 'Rent is within recommended range.' : 'High rent—target ≤ 10–15% of branch revenue.');
+      if(prod>0) tips.push(prod >=4 ? 'Good productivity per employee.' : 'Productivity low—target ≥ 4× average salary.');
+      if(ret>0) tips.push(ret >=60 ? 'Customer return rate healthy.' : 'Work on retention—target 60–70%');
+      q('#quickTips').textContent = tips.join(' \n');
+    })
+
+    q('#saveQuickBtn').addEventListener('click', ()=>{
+      // map quick inputs into metrics where applicable
+      const sp = Number(q('#sellingPriceRatio').value||0); const rent = Number(q('#rentPct').value||0); const prod = Number(q('#prodPerEmp').value||0); const ret = Number(q('#custReturn').value||0);
+      state.metrics.forEach(m=>{
+        if(m.key.includes('Selling') && sp>0) m.value = sp;
+        if(m.key.includes('Rent') && rent>0) m.value = rent;
+        if(m.key.includes('Productivity') && prod>0) m.value = prod;
+        if(m.key.includes('Customer') && ret>0) m.value = ret;
+      }); saveState(state); renderMetrics(); recalcScore(); alert('Saved to Dashboard');
+    })
+
+    q('#branchName').addEventListener('keydown', (e)=>{if(e.key==='Enter'){q('#addBranchBtn').click();}})
+    q('#addBranchBtn').addEventListener('click', ()=>{const n=q('#branchName').value.trim(); if(!n)return; state.branches.push({id:uid(),name:n}); saveState(state); renderBranches(); q('#branchName').value='';})
+
+    q('#exportBtn').addEventListener('click', ()=>{
+      const data = JSON.stringify(state, null, 2); const blob = new Blob([data],{type:'application/json'}); const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='metricmaster-data.json'; a.click(); URL.revokeObjectURL(url);
+    })
+
+    q('#themeSelect').addEventListener('change',(e)=>{state.settings.theme = e.target.value==='dark'?'dark':'day'; saveState(state); applyTheme();})
+
+    // branches, recs
+    function generateRecs(){
+      const s = recalcScore(); const recs = [];
+      if(s>=80) recs.push('Ready to expand — fundamentals strong.');
+      if(s<80 && s>=50) recs.push('Caution: fix high-impact metrics: Selling price, Rent, Productivity.');
+      if(s<50) recs.push('Hold expansion. Review SOPs, working capital and marketing ROI.');
+      q('#recs').textContent = recs.join(' ');
+    }
+    generateRecs();
+
+    // score updates trigger recs
+    const obs = new MutationObserver(()=>generateRecs()); obs.observe(q('#scoreBadge'),{childList:true});
+
+    // install prompt hook
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e)=>{
+      e.preventDefault(); deferredPrompt = e; q('#installBtn').style.display='inline-block';
+      q('#installBtn').addEventListener('click', async ()=>{deferredPrompt.prompt(); const choice = await deferredPrompt.userChoice; deferredPrompt = null; q('#installBtn').style.display='none';});
+    });
+
+    // service worker registration
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('/sw.js').then(()=>console.log('SW registered')).catch(()=>console.log('SW failed'));
+    }
+
+    // simple accessibility: focus outline
+    document.body.addEventListener('keydown', (e)=>{if(e.key==='Tab') document.documentElement.classList.add('show-focus');});
+  </script>
+
+</body>
+</html>
