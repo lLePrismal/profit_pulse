@@ -6,6 +6,8 @@ Files included below. Save as separate files as noted:
   2) sw.js       (Service Worker - copy into sw.js)
   3) manifest.json (copy into manifest.json)
 
+This revision fixes a runtime error where event listeners were being attached before the DOM was ready ("Cannot read properties of null (reading 'addEventListener')"). All DOM access and event listener registration now happen inside DOMContentLoaded. Additional safety checks guard against missing elements.
+
 Features:
 - SEO-ready meta + JSON-LD
 - Progressive Web App (installable)
@@ -19,7 +21,7 @@ How to use:
 - Place index.html, sw.js, manifest.json at your site root on HTTPS.
 - Provide icons at /icons/icon-192.png and /icons/icon-512.png or adjust manifest paths.
 
-*/
+-->
 
 <!doctype html>
 <html lang="en">
@@ -132,7 +134,7 @@ How to use:
                   <input type="number" id="sellPrice" placeholder="Sell" min="0" step="0.01">
                 </div>
                 <div style="display:flex;gap:6px">
-                  <button onclick="calcSellRatio()">Calc Ratio</button>
+                  <button id="calcSellBtn">Calc Ratio</button>
                   <input id="sellRatio" type="text" placeholder="Ratio" readonly style="min-width:100px">
                 </div>
               </div>
@@ -150,7 +152,7 @@ How to use:
                   <input type="number" id="revenueAmt" placeholder="Revenue" min="0" step="0.01">
                 </div>
                 <div style="display:flex;gap:6px">
-                  <button onclick="calcRentPct()">Calc Rent %</button>
+                  <button id="calcRentBtn">Calc Rent %</button>
                   <input id="rentPct" type="text" placeholder="% of rev" readonly style="min-width:100px">
                 </div>
               </div>
@@ -168,7 +170,7 @@ How to use:
                   <input type="number" id="avgSalary" placeholder="Avg salary" min="0" step="0.01">
                 </div>
                 <div style="display:flex;gap:6px">
-                  <button onclick="calcProdEmp()">Calc ×Salary</button>
+                  <button id="calcProdBtn">Calc ×Salary</button>
                   <input id="prodRatio" type="text" placeholder="x salary" readonly style="min-width:100px">
                 </div>
               </div>
@@ -183,7 +185,7 @@ How to use:
               <div style="display:flex;gap:6px;align-items:center">
                 <input type="number" id="salaryTotal" placeholder="Total salary" min="0" step="0.01">
                 <input type="number" id="revenueTotal" placeholder="Revenue" min="0" step="0.01">
-                <button onclick="calcSalaryPct()">Calc %</button>
+                <button id="calcSalaryBtn">Calc %</button>
                 <input id="salaryPct" type="text" placeholder="%" readonly style="min-width:80px">
               </div>
             </div>
@@ -197,7 +199,7 @@ How to use:
               <div style="display:flex;gap:6px;align-items:center">
                 <input type="number" id="returningCust" placeholder="Returning" min="0" step="1">
                 <input type="number" id="totalCust" placeholder="Total" min="0" step="1">
-                <button onclick="calcReturnRate()">Calc %</button>
+                <button id="calcReturnBtn">Calc %</button>
                 <input id="returnRate" type="text" placeholder="%" readonly style="min-width:80px">
               </div>
             </div>
@@ -211,7 +213,7 @@ How to use:
               <div style="display:flex;gap:6px;align-items:center">
                 <input type="number" id="mktRevenue" placeholder="Revenue" min="0" step="0.01">
                 <input type="number" id="mktCost" placeholder="Cost" min="0" step="0.01">
-                <button onclick="calcMktROI()">Calc ROI</button>
+                <button id="calcMktBtn">Calc ROI</button>
                 <input id="mktROI" type="text" placeholder="x" readonly style="min-width:80px">
               </div>
             </div>
@@ -225,7 +227,7 @@ How to use:
               <div style="display:flex;gap:6px;align-items:center">
                 <input type="number" id="cashReserve" placeholder="Cash" min="0" step="0.01">
                 <input type="number" id="fixedExpenses" placeholder="Monthly fixed" min="0" step="0.01">
-                <button onclick="calcWorkingCap()">Calc months</button>
+                <button id="calcWCBtn">Calc months</button>
                 <input id="wcMonths" type="text" placeholder="months" readonly style="min-width:80px">
               </div>
             </div>
@@ -239,7 +241,7 @@ How to use:
               <div style="display:flex;gap:6px;align-items:center">
                 <input type="number" id="investment" placeholder="Investment" min="0" step="0.01">
                 <input type="number" id="monthlyNet" placeholder="Net/month" min="0" step="0.01">
-                <button onclick="calcPayback()">Calc months</button>
+                <button id="calcPBBtn">Calc months</button>
                 <input id="paybackMonths" type="text" placeholder="months" readonly style="min-width:80px">
               </div>
             </div>
@@ -257,7 +259,7 @@ How to use:
                 </div>
                 <div style="display:flex;gap:6px">
                   <input id="trainingDate" type="date">
-                  <button onclick="calcOperational()">Calc Readiness</button>
+                  <button id="calcOpBtn">Calc Readiness</button>
                   <input id="opScore" type="text" placeholder="score" readonly style="min-width:80px">
                 </div>
               </div>
@@ -272,15 +274,15 @@ How to use:
               <div style="display:flex;gap:6px;align-items:center">
                 <input type="number" id="revPL" placeholder="Revenue" min="0" step="0.01">
                 <input type="number" id="costPL" placeholder="Total cost" min="0" step="0.01">
-                <button onclick="calcPL()">Calc margin</button>
+                <button id="calcPLBtn">Calc margin</button>
                 <input id="plMargin" type="text" placeholder="%" readonly style="min-width:80px">
               </div>
             </div>
 
             <div style="display:flex;gap:8px;margin-top:8px">
-              <button onclick="calcAll()">Calculate All</button>
-              <button class="ghost" onclick="saveState()">Save</button>
-              <button class="ghost" onclick="resetAll()">Reset</button>
+              <button id="calcAllBtn">Calculate All</button>
+              <button class="ghost" id="saveBtn">Save</button>
+              <button class="ghost" id="resetBtn">Reset</button>
             </div>
 
             <div id="tips" style="margin-top:12px;color:var(--muted)"></div>
@@ -322,90 +324,115 @@ How to use:
     // helpers
     const q = s=>document.querySelector(s);
     const num = v=>Number(v)||0;
-    const saveState = ()=>localStorage.setItem(LS,JSON.stringify(state));
+
+    function safeAddListener(selector, event, handler){
+      const el = q(selector);
+      if(el) el.addEventListener(event, handler);
+    }
 
     function loadState(){
-      try{const raw=localStorage.getItem(LS); if(raw){state=JSON.parse(raw);} else {state={branches:[],settings:{theme:'day'}}} }catch(e){state={branches:[],settings:{theme:'day'}}}
+      try{
+        const raw=localStorage.getItem(LS);
+        if(!raw) return; 
+        const parsed = JSON.parse(raw);
+        // support both older format (state only) and new format {state, inputs}
+        if(parsed && parsed.state) state = parsed.state;
+        else if(parsed && parsed.branches) state = parsed;
+      }catch(e){ state={branches:[],settings:{theme:'day'}} }
     }
+
+    function saveState(){ localStorage.setItem(LS, JSON.stringify({state})); }
 
     // calc functions
     function calcSellRatio(){
-      const cost=num(q('#costPrice').value); const sell=num(q('#sellPrice').value);
+      const cost=num(q('#costPrice')?.value); const sell=num(q('#sellPrice')?.value);
       const r = cost>0? (sell/cost).toFixed(2) : '';
-      q('#sellRatio').value = r; return Number(r)||0;
+      const el = q('#sellRatio'); if(el) el.value = r; return Number(r)||0;
     }
 
     function calcRentPct(){
-      const rent=num(q('#rentAmt').value); const rev=num(q('#revenueAmt').value);
+      const rent=num(q('#rentAmt')?.value); const rev=num(q('#revenueAmt')?.value);
       const pct = rev>0? ((rent/rev)*100).toFixed(1) : '';
-      q('#rentPct').value = pct? pct+'%' : ''; return Number(pct)||0;
+      const el = q('#rentPct'); if(el) el.value = pct? pct+'%' : ''; return Number(pct)||0;
     }
 
     function calcProdEmp(){
-      const revEmp=num(q('#revPerEmp').value); const sal=num(q('#avgSalary').value);
+      const revEmp=num(q('#revPerEmp')?.value); const sal=num(q('#avgSalary')?.value);
       const x = sal>0? (revEmp/sal).toFixed(2) : '';
-      q('#prodRatio').value = x; return Number(x)||0;
+      const el = q('#prodRatio'); if(el) el.value = x; return Number(x)||0;
     }
 
     function calcSalaryPct(){
-      const sal=num(q('#salaryTotal').value); const rev=num(q('#revenueTotal').value);
+      const sal=num(q('#salaryTotal')?.value); const rev=num(q('#revenueTotal')?.value);
       const pct = rev>0? ((sal/rev)*100).toFixed(1) : '';
-      q('#salaryPct').value = pct? pct+'%' : ''; return Number(pct)||0;
+      const el = q('#salaryPct'); if(el) el.value = pct? pct+'%' : ''; return Number(pct)||0;
     }
 
     function calcReturnRate(){
-      const ret=num(q('#returningCust').value); const tot=num(q('#totalCust').value);
+      const ret=num(q('#returningCust')?.value); const tot=num(q('#totalCust')?.value);
       const pct = tot>0? ((ret/tot)*100).toFixed(1) : '';
-      q('#returnRate').value = pct? pct+'%' : ''; return Number(pct)||0;
+      const el = q('#returnRate'); if(el) el.value = pct? pct+'%' : ''; return Number(pct)||0;
     }
 
     function calcMktROI(){
-      const rev=num(q('#mktRevenue').value); const cost=num(q('#mktCost').value);
+      const rev=num(q('#mktRevenue')?.value); const cost=num(q('#mktCost')?.value);
       const roi = cost>0? (rev/cost).toFixed(2) : '';
-      q('#mktROI').value = roi; return Number(roi)||0;
+      const el = q('#mktROI'); if(el) el.value = roi; return Number(roi)||0;
     }
 
     function calcWorkingCap(){
-      const cash=num(q('#cashReserve').value); const fixed=num(q('#fixedExpenses').value);
+      const cash=num(q('#cashReserve')?.value); const fixed=num(q('#fixedExpenses')?.value);
       const months = fixed>0? (cash/fixed).toFixed(1) : '';
-      q('#wcMonths').value = months; return Number(months)||0;
+      const el = q('#wcMonths'); if(el) el.value = months; return Number(months)||0;
     }
 
     function calcPayback(){
-      const invest=num(q('#investment').value); const net=num(q('#monthlyNet').value);
+      const invest=num(q('#investment')?.value); const net=num(q('#monthlyNet')?.value);
       const months = net>0? (invest/net).toFixed(1) : '';
-      q('#paybackMonths').value = months; return Number(months)||0;
+      const el = q('#paybackMonths'); if(el) el.value = months; return Number(months)||0;
     }
 
     function calcOperational(){
-      const sop = Number(q('#sopStatus').value); const bench = num(q('#benchTarget').value);
-      // simple score: SOP contributes 40%, benchmark normalized to 60% (out of 100)
+      const sop = Number(q('#sopStatus')?.value||0); const bench = num(q('#benchTarget')?.value);
       const benchNorm = Math.max(0,Math.min(100,bench));
       const score = Math.round((sop*40) + (benchNorm*0.6));
-      q('#opScore').value = score; return Number(score)||0;
+      const el = q('#opScore'); if(el) el.value = score; return Number(score)||0;
     }
 
     function calcPL(){
-      const rev=num(q('#revPL').value); const cost=num(q('#costPL').value);
+      const rev=num(q('#revPL')?.value); const cost=num(q('#costPL')?.value);
       const margin = rev>0? (((rev-cost)/rev)*100).toFixed(1) : '';
-      q('#plMargin').value = margin? margin+'%' : ''; return Number(margin)||0;
+      const el = q('#plMargin'); if(el) el.value = margin? margin+'%' : ''; return Number(margin)||0;
     }
 
-    function calcAll(){
-      const a = {};
-      a.sellRatio = calcSellRatio(); a.rentPct = calcRentPct(); a.prodEmp = calcProdEmp(); a.salaryPct = calcSalaryPct();
-      a.returnRate = calcReturnRate(); a.mktROI = calcMktROI(); a.wcMonths = calcWorkingCap(); a.payback = calcPayback();
-      a.opScore = calcOperational(); a.plMargin = calcPL();
-      showSnapshot(a); computePulse(a);
-      saveStateLocalInputs();
+    function showSnapshot(a){
+      const s = a || {
+        sellRatio:q('#sellRatio')?.value, rentPct:q('#rentPct')?.value, prodEmp:q('#prodRatio')?.value,
+        salaryPct:q('#salaryPct')?.value, returnRate:q('#returnRate')?.value, mktROI:q('#mktROI')?.value,
+        wcMonths:q('#wcMonths')?.value, payback:q('#paybackMonths')?.value, opScore:q('#opScore')?.value, plMargin:q('#plMargin')?.value
+      };
+      const html = `
+        <div class="kpi-grid">
+          <div><strong>Sell x</strong><div class="muted">${s.sellRatio||'—'}</div></div>
+          <div><strong>Rent %</strong><div class="muted">${s.rentPct||'—'}</div></div>
+          <div><strong>Productivity x</strong><div class="muted">${s.prodEmp||'—'}</div></div>
+          <div><strong>Salary %</strong><div class="muted">${s.salaryPct||'—'}</div></div>
+          <div><strong>Return %</strong><div class="muted">${s.returnRate||'—'}</div></div>
+          <div><strong>Mkt ROI</strong><div class="muted">${s.mktROI||'—'}</div></div>
+          <div><strong>WC (mo)</strong><div class="muted">${s.wcMonths||'—'}</div></div>
+          <div><strong>Payback</strong><div class="muted">${s.payback||'—'}</div></div>
+          <div><strong>OpScore</strong><div class="muted">${s.opScore||'—'}</div></div>
+          <div><strong>Margin</strong><div class="muted">${s.plMargin||'—'}</div></div>
+        </div>
+      `;
+      const snap = q('#snapshot'); if(snap) snap.innerHTML = html;
     }
 
     // compute composite pulse score and simple actions
     function computePulse(a){
-      // scoring heuristics (weights): selling ratio 12%, rent 10%, productivity 12%, salary% 10%, returnRate 10%, mktROI 8%, wc 10%, payback 8%, opScore 10%, plMargin 10% = total 100
       const w = {sell:12,rent:10,prod:12,salary:10,ret:10,mkt:8,wc:10,pb:8,op:10,pl:10};
       let total=0, weightSum=0;
-      // selling ratio: target >=2.5 => score=min(val/2.5,1)
+
       if(a.sellRatio){ total += Math.min(a.sellRatio/2.5,1)*w.sell; weightSum+=w.sell; }
       if(a.rentPct){ total += (a.rentPct<=15?1: Math.max(0,15/a.rentPct))*w.rent; weightSum+=w.rent; }
       if(a.prodEmp){ total += Math.min(a.prodEmp/4,1)*w.prod; weightSum+=w.prod; }
@@ -418,78 +445,136 @@ How to use:
       if(a.plMargin){ total += (a.plMargin>=10?1: Math.max(0,a.plMargin/10))*w.pl; weightSum+=w.pl; }
 
       const percent = weightSum? Math.round((total/weightSum)*100):0;
-      q('#pulseScore').textContent = percent + '%';
+      const badge = q('#pulseScore'); if(badge) badge.textContent = percent + '%';
 
-      // actions
       const actions = [];
       if(percent>=80) actions.push('Ready to scale — fundamentals strong.');
       if(percent>=60 && percent<80) actions.push('Caution: optimize rent, pricing or productivity before expanding.');
       if(percent<60) actions.push('Hold expansion. Improve SOPs, working capital, and marketing ROI.');
-      q('#actions').textContent = actions.join(' ');
-    }
-
-    function showSnapshot(a){
-      const s = a || {sellRatio:q('#sellRatio').value, rentPct:q('#rentPct').value, prodEmp:q('#prodRatio').value, salaryPct:q('#salaryPct').value, returnRate:q('#returnRate').value, mktROI:q('#mktROI').value, wcMonths:q('#wcMonths').value, payback:q('#paybackMonths').value, opScore:q('#opScore').value, plMargin:q('#plMargin').value};
-      const html = `
-        <div class=\"kpi-grid\">
-          <div><strong>Sell x</strong><div class=\"muted\">${s.sellRatio||'—'}</div></div>
-          <div><strong>Rent %</strong><div class=\"muted\">${s.rentPct||'—'}</div></div>
-          <div><strong>Productivity x</strong><div class=\"muted\">${s.prodEmp||'—'}</div></div>
-          <div><strong>Salary %</strong><div class=\"muted\">${s.salaryPct||'—'}</div></div>
-          <div><strong>Return %</strong><div class=\"muted\">${s.returnRate||'—'}</div></div>
-          <div><strong>Mkt ROI</strong><div class=\"muted\">${s.mktROI||'—'}</div></div>
-          <div><strong>WC (mo)</strong><div class=\"muted\">${s.wcMonths||'—'}</div></div>
-          <div><strong>Payback</strong><div class=\"muted\">${s.payback||'—'}</div></div>
-          <div><strong>OpScore</strong><div class=\"muted\">${s.opScore||'—'}</div></div>
-          <div><strong>Margin</strong><div class=\"muted\">${s.plMargin||'—'}</div></div>
-        </div>
-      `;
-      q('#snapshot').innerHTML = html;
+      const actEl = q('#actions'); if(actEl) actEl.textContent = actions.join(' ');
     }
 
     // save simple inputs to localStorage for restoration
     function saveStateLocalInputs(){
-      const data = {
-        costPrice:q('#costPrice').value, sellPrice:q('#sellPrice').value, rentAmt:q('#rentAmt').value, revenueAmt:q('#revenueAmt').value,
-        revPerEmp:q('#revPerEmp').value, avgSalary:q('#avgSalary').value, salaryTotal:q('#salaryTotal').value, revenueTotal:q('#revenueTotal').value,
-        returningCust:q('#returningCust').value, totalCust:q('#totalCust').value, mktRevenue:q('#mktRevenue').value, mktCost:q('#mktCost').value,
-        cashReserve:q('#cashReserve').value, fixedExpenses:q('#fixedExpenses').value, investment:q('#investment').value, monthlyNet:q('#monthlyNet').value,
-        sopStatus:q('#sopStatus').value, benchTarget:q('#benchTarget').value, trainingDate:q('#trainingDate').value,
-        revPL:q('#revPL').value, costPL:q('#costPL').value
+      const inputs = {
+        costPrice:q('#costPrice')?.value, sellPrice:q('#sellPrice')?.value, rentAmt:q('#rentAmt')?.value, revenueAmt:q('#revenueAmt')?.value,
+        revPerEmp:q('#revPerEmp')?.value, avgSalary:q('#avgSalary')?.value, salaryTotal:q('#salaryTotal')?.value, revenueTotal:q('#revenueTotal')?.value,
+        returningCust:q('#returningCust')?.value, totalCust:q('#totalCust')?.value, mktRevenue:q('#mktRevenue')?.value, mktCost:q('#mktCost')?.value,
+        cashReserve:q('#cashReserve')?.value, fixedExpenses:q('#fixedExpenses')?.value, investment:q('#investment')?.value, monthlyNet:q('#monthlyNet')?.value,
+        sopStatus:q('#sopStatus')?.value, benchTarget:q('#benchTarget')?.value, trainingDate:q('#trainingDate')?.value,
+        revPL:q('#revPL')?.value, costPL:q('#costPL')?.value
       };
-      const full = {state, inputs:data}; localStorage.setItem(LS,JSON.stringify(full));
+      localStorage.setItem(LS, JSON.stringify({state, inputs}));
     }
 
     function restoreInputs(){
       const raw = localStorage.getItem(LS); if(!raw) return;
-      try{const parsed = JSON.parse(raw); if(parsed.inputs){Object.keys(parsed.inputs).forEach(k=>{const el=q('#'+k); if(el) el.value = parsed.inputs[k];}); if(parsed.state) state = parsed.state;} }catch(e){}
+      try{
+        const parsed = JSON.parse(raw);
+        if(parsed.inputs){ Object.keys(parsed.inputs).forEach(k=>{ const el = q('#'+k); if(el) el.value = parsed.inputs[k]; }); }
+        if(parsed.state) state = parsed.state;
+      }catch(e){ console.warn('restore failed', e); }
     }
 
-    function resetAll(){ if(confirm('Reset all inputs?')){ document.querySelectorAll('input[type="number"], input[type="text"]').forEach(i=>i.value=''); document.querySelectorAll('input[readonly]').forEach(i=>i.value=''); document.querySelectorAll('select').forEach(s=>s.selectedIndex=0); q('#pulseScore').textContent='—'; q('#actions').textContent='—'; q('#snapshot').innerHTML=''; localStorage.removeItem(LS); }}
+    function resetAll(){ if(confirm('Reset all inputs?')){ document.querySelectorAll('input[type="number"], input[type="text"]').forEach(i=>i.value=''); document.querySelectorAll('input[readonly]').forEach(i=>i.value=''); document.querySelectorAll('select').forEach(s=>s.selectedIndex=0); const badge = q('#pulseScore'); if(badge) badge.textContent='—'; const act = q('#actions'); if(act) act.textContent='—'; const snap = q('#snapshot'); if(snap) snap.innerHTML=''; localStorage.removeItem(LS); state={branches:[],settings:{theme:'day'}}; saveState(); renderBranches(); applyTheme(); }}
 
     // branches
-    function renderBranches(){ const el=q('#branches'); el.innerHTML=''; state.branches.forEach(b=>{ const d=document.createElement('div'); d.className='tiny chip'; d.style.marginBottom='6px'; d.textContent=b.name; el.appendChild(d); }); }
-    q('#addBranchBtn')?.addEventListener('click', ()=>{ const n=q('#branchName').value.trim(); if(!n) return; state.branches.push({id:Date.now(),name:n}); saveState(); renderBranches(); q('#branchName').value=''; });
+    function renderBranches(){ const el=q('#branches'); if(!el) return; el.innerHTML=''; state.branches.forEach(b=>{ const d=document.createElement('div'); d.className='tiny chip'; d.style.marginBottom='6px'; d.textContent=b.name; el.appendChild(d); }); }
 
     // theme
-    function applyTheme(){ const t = state.settings.theme||'day'; document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'day'); q('#themeSelect').value = t==='dark'?'dark':'day'; q('#themeColorMeta').setAttribute('content', t==='dark'?'#071021':'#f4f7fb'); }
-    q('#themeSelect').addEventListener('change', (e)=>{ state.settings.theme = e.target.value==='dark'?'dark':'day'; saveState(); applyTheme(); });
+    function applyTheme(){ const t = state.settings.theme||'day'; document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'day'); const sel = q('#themeSelect'); if(sel) sel.value = t==='dark'?'dark':'day'; const meta = q('#themeColorMeta'); if(meta) meta.setAttribute('content', t==='dark'?'#071021':'#f4f7fb'); }
 
-    // export
-    q('#exportBtn').addEventListener('click', ()=>{ const data = localStorage.getItem(LS)||'{}'; const blob = new Blob([data],{type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='profit-pulse-data.json'; a.click(); URL.revokeObjectURL(url); });
+    // DOM ready
+    document.addEventListener('DOMContentLoaded', ()=>{
+      // restore initial state
+      loadState(); restoreInputs(); applyTheme(); renderBranches();
 
-    // install prompt
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt = e; q('#installBtn').style.display='inline-block'; q('#installBtn').addEventListener('click', async ()=>{ deferredPrompt.prompt(); const choice = await deferredPrompt.userChoice; deferredPrompt=null; q('#installBtn').style.display='none'; }); });
+      // safe event binding
+      safeAddListener('#calcSellBtn','click', calcSellRatio);
+      safeAddListener('#calcRentBtn','click', calcRentPct);
+      safeAddListener('#calcProdBtn','click', calcProdEmp);
+      safeAddListener('#calcSalaryBtn','click', calcSalaryPct);
+      safeAddListener('#calcReturnBtn','click', calcReturnRate);
+      safeAddListener('#calcMktBtn','click', calcMktROI);
+      safeAddListener('#calcWCBtn','click', calcWorkingCap);
+      safeAddListener('#calcPBBtn','click', calcPayback);
+      safeAddListener('#calcOpBtn','click', calcOperational);
+      safeAddListener('#calcPLBtn','click', calcPL);
 
-    // service worker register
-    if('serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').catch(()=>console.log('sw fail')); }
+      safeAddListener('#calcAllBtn','click', ()=>{ const a = {}; a.sellRatio = calcSellRatio(); a.rentPct = calcRentPct(); a.prodEmp = calcProdEmp(); a.salaryPct = calcSalaryPct(); a.returnRate = calcReturnRate(); a.mktROI = calcMktROI(); a.wcMonths = calcWorkingCap(); a.payback = calcPayback(); a.opScore = calcOperational(); a.plMargin = calcPL(); showSnapshot(a); computePulse(a); saveStateLocalInputs(); });
 
-    // init
-    loadState(); restoreInputs(); applyTheme(); renderBranches();
+      safeAddListener('#saveBtn','click', saveStateLocalInputs);
+      safeAddListener('#resetBtn','click', resetAll);
+
+      // branches
+      const addBranch = ()=>{ const input = q('#branchName'); if(!input) return; const n = input.value.trim(); if(!n) return; state.branches.push({id:Date.now(),name:n}); saveState(); renderBranches(); input.value=''; };
+      safeAddListener('#addBranchBtn','click', addBranch);
+
+      // theme select
+      const themeSel = q('#themeSelect'); if(themeSel) themeSel.addEventListener('change', (e)=>{ state.settings.theme = e.target.value==='dark'?'dark':'day'; saveState(); applyTheme(); });
+
+      // export
+      const exportBtn = q('#exportBtn'); if(exportBtn) exportBtn.addEventListener('click', ()=>{ const data = localStorage.getItem(LS)||'{}'; const blob = new Blob([data],{type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='profit-pulse-data.json'; a.click(); URL.revokeObjectURL(url); });
+
+      // install prompt
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt = e; const ib = q('#installBtn'); if(ib){ ib.style.display='inline-block'; ib.addEventListener('click', async ()=>{ deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; ib.style.display='none'; }); } });
+
+      // service worker
+      if('serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').catch(()=>console.log('sw fail')); }
+
+    });
 
     // small keyboard accessibility
-    document.body.addEventListener('keydown', (e)=>{ if(e.key==='Enter') { /* allow enter to trigger calculate when focused on inputs? optional */ } });
+    document.body.addEventListener('keydown', (e)=>{ if(e.key==='Enter') { /* optional */ } });
   </script>
 </body>
 </html>
+
+
+/* ============================ sw.js ============================ */
+
+// copy below into sw.js at root
+self.addEventListener('install', function(event) {
+  event.waitUntil(
+    caches.open('profitpulse-cache-v1').then(function(cache) {
+      return cache.addAll([
+        '/',
+        '/index.html',
+        '/manifest.json'
+      ]);
+    })
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function(event) {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('fetch', function(event) {
+  event.respondWith(
+    caches.match(event.request).then(function(response) {
+      return response || fetch(event.request).catch(()=>caches.match('/index.html'));
+    })
+  );
+});
+
+
+/* ============================ manifest.json ============================ */
+
+{
+  "name": "Profit Pulse",
+  "short_name": "ProfitPulse",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#0b1220",
+  "icons": [
+    {"src":"/icons/icon-192.png","sizes":"192x192","type":"image/png"},
+    {"src":"/icons/icon-512.png","sizes":"512x512","type":"image/png"}
+  ]
+}
+
+
+<!-- End of document -->
