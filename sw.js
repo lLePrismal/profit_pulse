@@ -1,13 +1,9 @@
-* ========================= sw.js (Service Worker) ========================= */
+/* ============================ sw.js ============================ */
 
-/*
-Copy the content below into a separate file named sw.js and place it at the web root.
-*/
-
-// sw.js
+// copy below into sw.js at root
 self.addEventListener('install', function(event) {
   event.waitUntil(
-    caches.open('metricmaster-cache-v1').then(function(cache) {
+    caches.open('profitpulse-cache-v1').then(function(cache) {
       return cache.addAll([
         '/',
         '/index.html',
@@ -25,10 +21,7 @@ self.addEventListener('activate', function(event) {
 self.addEventListener('fetch', function(event) {
   event.respondWith(
     caches.match(event.request).then(function(response) {
-      return response || fetch(event.request).catch(()=>{
-        // fallback for offline - returns cached index
-        return caches.match('/index.html');
-      });
+      return response || fetch(event.request).catch(()=>caches.match('/index.html'));
     })
   );
 });
